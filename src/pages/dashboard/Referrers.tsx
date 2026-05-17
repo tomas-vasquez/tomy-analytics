@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { BarChartCard } from '@/components/charts/Charts'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
+import { useSite } from '@/lib/SiteContext'
 
 interface Referrer {
   source: string
@@ -10,28 +11,20 @@ interface Referrer {
 }
 
 export default function ReferrersPage() {
+  const { selected } = useSite()
+  const id = selected?.id
   const [referrers, setReferrers] = useState<Referrer[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    if (!id) { setLoading(false); return }
     async function load() {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-
-      const { data: sites } = await supabase
-        .from('sites')
-        .select('id')
-        .eq('user_id', user.id)
-        .limit(1)
-
-      if (!sites?.length) { setLoading(false); return }
-
-      const { data } = await supabase.rpc('get_referrers', { p_site_id: sites[0].id, p_days: 30 })
+      const { data } = await supabase.rpc('get_referrers', { p_site_id: id, p_days: 30 })
       if (data) setReferrers(data as Referrer[])
       setLoading(false)
     }
     load()
-  }, [])
+  }, [selected])
 
   if (loading) return <LoadingSpinner />
 

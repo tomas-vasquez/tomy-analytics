@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase'
 import { StatCard } from '@/components/ui/StatCard'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 import { LineChartCard } from '@/components/charts/Charts'
+import { useSite } from '@/lib/SiteContext'
 
 function formatDuration(seconds: number): string {
   if (seconds < 60) return `${seconds}s`
@@ -35,28 +36,15 @@ interface DailyStat {
 }
 
 export default function OverviewPage() {
+  const { selected } = useSite()
   const [stats, setStats] = useState<Stats | null>(null)
   const [dailyStats, setDailyStats] = useState<DailyStat[]>([])
   const [loading, setLoading] = useState(true)
 
+  const id = selected?.id
   useEffect(() => {
+    if (!id) { setLoading(false); return }
     async function load() {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-
-      const { data: sites } = await supabase
-        .from('sites')
-        .select('id')
-        .eq('user_id', user.id)
-        .limit(1)
-
-      if (!sites?.length) {
-        setLoading(false)
-        return
-      }
-
-      const id = sites[0].id
-
       const [statsRes, dailyRes] = await Promise.all([
         supabase.rpc('get_dashboard_stats', { p_site_id: id, p_days: 30 }),
         supabase.rpc('get_daily_stats', { p_site_id: id, p_days: 30 }),
@@ -68,7 +56,7 @@ export default function OverviewPage() {
     }
 
     load()
-  }, [])
+  }, [selected])
 
   if (loading) return <LoadingSpinner />
 

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { StatCard } from '@/components/ui/StatCard'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
+import { useSite } from '@/lib/SiteContext'
 
 interface Pageview {
   path: string
@@ -16,31 +17,23 @@ interface RealtimeData {
 }
 
 export default function RealtimePage() {
+  const { selected } = useSite()
   const [data, setData] = useState<RealtimeData | null>(null)
   const [loading, setLoading] = useState(true)
 
   async function fetchData() {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
-
-    const { data: sites } = await supabase
-      .from('sites')
-      .select('id')
-      .eq('user_id', user.id)
-      .limit(1)
-
-    if (!sites?.length) { setLoading(false); return }
-
-    const { data: result } = await supabase.rpc('get_realtime', { p_site_id: sites[0].id })
+    if (!selected) return
+    const { data: result } = await supabase.rpc('get_realtime', { p_site_id: selected.id })
     if (result) setData(result as RealtimeData)
     setLoading(false)
   }
 
   useEffect(() => {
+    if (!selected) { setLoading(false); return }
     fetchData()
     const interval = setInterval(fetchData, 10000)
     return () => clearInterval(interval)
-  }, [])
+  }, [selected])
 
   if (loading) return <LoadingSpinner />
 

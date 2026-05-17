@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { BarChartCard } from '@/components/charts/Charts'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
+import { useSite } from '@/lib/SiteContext'
 
 interface TopPage {
   path: string
@@ -10,28 +11,20 @@ interface TopPage {
 }
 
 export default function PagesPage() {
+  const { selected } = useSite()
+  const id = selected?.id
   const [pages, setPages] = useState<TopPage[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    if (!id) { setLoading(false); return }
     async function load() {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-
-      const { data: sites } = await supabase
-        .from('sites')
-        .select('id')
-        .eq('user_id', user.id)
-        .limit(1)
-
-      if (!sites?.length) { setLoading(false); return }
-
-      const { data } = await supabase.rpc('get_top_pages', { p_site_id: sites[0].id, p_days: 30 })
+      const { data } = await supabase.rpc('get_top_pages', { p_site_id: id, p_days: 30 })
       if (data) setPages(data as TopPage[])
       setLoading(false)
     }
     load()
-  }, [])
+  }, [selected])
 
   if (loading) return <LoadingSpinner />
 

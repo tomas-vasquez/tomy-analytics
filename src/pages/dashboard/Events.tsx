@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { BarChartCard } from '@/components/charts/Charts'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
+import { useSite } from '@/lib/SiteContext'
 
 interface EventItem {
   event_name: string
@@ -9,28 +10,20 @@ interface EventItem {
 }
 
 export default function EventsPage() {
+  const { selected } = useSite()
+  const id = selected?.id
   const [events, setEvents] = useState<EventItem[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    if (!id) { setLoading(false); return }
     async function load() {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-
-      const { data: sites } = await supabase
-        .from('sites')
-        .select('id')
-        .eq('user_id', user.id)
-        .limit(1)
-
-      if (!sites?.length) { setLoading(false); return }
-
-      const { data } = await supabase.rpc('get_events', { p_site_id: sites[0].id, p_days: 30 })
+      const { data } = await supabase.rpc('get_events', { p_site_id: id, p_days: 30 })
       if (data) setEvents(data as EventItem[])
       setLoading(false)
     }
     load()
-  }, [])
+  }, [selected])
 
   if (loading) return <LoadingSpinner />
 

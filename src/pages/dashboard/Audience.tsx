@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { PieChartCard } from '@/components/charts/Charts'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
+import { useSite } from '@/lib/SiteContext'
 
 interface PieItem {
   name: string
@@ -15,28 +16,20 @@ interface DeviceStats {
 }
 
 export default function AudiencePage() {
+  const { selected } = useSite()
+  const id = selected?.id
   const [data, setData] = useState<DeviceStats | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    if (!id) { setLoading(false); return }
     async function load() {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-
-      const { data: sites } = await supabase
-        .from('sites')
-        .select('id')
-        .eq('user_id', user.id)
-        .limit(1)
-
-      if (!sites?.length) { setLoading(false); return }
-
-      const { data: result } = await supabase.rpc('get_device_stats', { p_site_id: sites[0].id, p_days: 30 })
+      const { data: result } = await supabase.rpc('get_device_stats', { p_site_id: id, p_days: 30 })
       if (result) setData(result as DeviceStats)
       setLoading(false)
     }
     load()
-  }, [])
+  }, [selected])
 
   if (loading) return <LoadingSpinner />
   if (!data) return <div className="p-6 text-slate-500">No hay datos disponibles</div>

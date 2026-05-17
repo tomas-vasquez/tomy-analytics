@@ -146,13 +146,16 @@ BEGIN
   RETURN (
     SELECT COALESCE(jsonb_agg(jsonb_build_object(
       'path', path,
-      'pageviews', COUNT(*),
-      'unique_visitors', COUNT(DISTINCT visitor_id)
-    ) ORDER BY COUNT(*) DESC), '[]'::JSONB)
-    FROM pageviews
-    WHERE site_id = p_site_id AND created_at >= since
-    GROUP BY path
-    LIMIT 20
+      'pageviews', pageviews,
+      'unique_visitors', unique_visitors
+    ) ORDER BY pageviews DESC), '[]'::JSONB)
+    FROM (
+      SELECT path, COUNT(*)::int AS pageviews, COUNT(DISTINCT visitor_id)::int AS unique_visitors
+      FROM pageviews
+      WHERE site_id = p_site_id AND created_at >= since
+      GROUP BY path
+      LIMIT 20
+    ) sub
   );
 END;
 $$;
@@ -167,14 +170,17 @@ DECLARE
 BEGIN
   RETURN (
     SELECT COALESCE(jsonb_agg(jsonb_build_object(
-      'source', COALESCE(NULLIF(referrer, ''), 'direct'),
-      'visits', COUNT(*),
-      'unique_visitors', COUNT(DISTINCT visitor_id)
-    ) ORDER BY COUNT(*) DESC), '[]'::JSONB)
-    FROM pageviews
-    WHERE site_id = p_site_id AND created_at >= since
-    GROUP BY COALESCE(NULLIF(referrer, ''), 'direct')
-    LIMIT 20
+      'source', source,
+      'visits', visits,
+      'unique_visitors', unique_visitors
+    ) ORDER BY visits DESC), '[]'::JSONB)
+    FROM (
+      SELECT COALESCE(NULLIF(referrer, ''), 'direct') AS source, COUNT(*)::int AS visits, COUNT(DISTINCT visitor_id)::int AS unique_visitors
+      FROM pageviews
+      WHERE site_id = p_site_id AND created_at >= since
+      GROUP BY COALESCE(NULLIF(referrer, ''), 'direct')
+      LIMIT 20
+    ) sub
   );
 END;
 $$;
@@ -188,9 +194,9 @@ DECLARE
   since TIMESTAMPTZ := now() - (p_days || ' days')::INTERVAL;
 BEGIN
   RETURN jsonb_build_object(
-    'devices', (SELECT COALESCE(jsonb_agg(jsonb_build_object('name', device_type, 'value', COUNT(*)) ORDER BY COUNT(*) DESC), '[]'::JSONB) FROM pageviews WHERE site_id = p_site_id AND created_at >= since GROUP BY device_type),
-    'browsers', (SELECT COALESCE(jsonb_agg(jsonb_build_object('name', browser, 'value', COUNT(*)) ORDER BY COUNT(*) DESC), '[]'::JSONB) FROM pageviews WHERE site_id = p_site_id AND created_at >= since GROUP BY browser),
-    'os', (SELECT COALESCE(jsonb_agg(jsonb_build_object('name', os, 'value', COUNT(*)) ORDER BY COUNT(*) DESC), '[]'::JSONB) FROM pageviews WHERE site_id = p_site_id AND created_at >= since GROUP BY os)
+    'devices', (SELECT COALESCE(jsonb_agg(jsonb_build_object('name', device_type, 'value', cnt) ORDER BY cnt DESC), '[]'::JSONB) FROM (SELECT device_type, COUNT(*)::int AS cnt FROM pageviews WHERE site_id = p_site_id AND created_at >= since GROUP BY device_type) sub),
+    'browsers', (SELECT COALESCE(jsonb_agg(jsonb_build_object('name', browser, 'value', cnt) ORDER BY cnt DESC), '[]'::JSONB) FROM (SELECT browser, COUNT(*)::int AS cnt FROM pageviews WHERE site_id = p_site_id AND created_at >= since GROUP BY browser) sub),
+    'os', (SELECT COALESCE(jsonb_agg(jsonb_build_object('name', os, 'value', cnt) ORDER BY cnt DESC), '[]'::JSONB) FROM (SELECT os, COUNT(*)::int AS cnt FROM pageviews WHERE site_id = p_site_id AND created_at >= since GROUP BY os) sub)
   );
 END;
 $$;
@@ -206,12 +212,15 @@ BEGIN
   RETURN (
     SELECT COALESCE(jsonb_agg(jsonb_build_object(
       'event_name', event_name,
-      'count', COUNT(*)
-    ) ORDER BY COUNT(*) DESC), '[]'::JSONB)
-    FROM events
-    WHERE site_id = p_site_id AND created_at >= since
-    GROUP BY event_name
-    LIMIT 50
+      'count', cnt
+    ) ORDER BY cnt DESC), '[]'::JSONB)
+    FROM (
+      SELECT event_name, COUNT(*)::int AS cnt
+      FROM events
+      WHERE site_id = p_site_id AND created_at >= since
+      GROUP BY event_name
+      LIMIT 50
+    ) sub
   );
 END;
 $$;

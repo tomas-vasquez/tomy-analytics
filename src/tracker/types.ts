@@ -18,6 +18,13 @@ export interface PageInfo {
   language: string
 }
 
+export interface PageOverride {
+  url?: string
+  path?: string
+  title?: string
+  referrer?: string
+}
+
 export interface Payload {
   p_site_id: string
   p_visitor_id: string

@@ -77,7 +77,26 @@ window.__analytics_config = {
 <script src="https://tu-dominio.com/analytics.js" defer></script>
 ```
 
-### Eventos personalizados:
+### API programática (via `window.__analytics`):
+
+```javascript
+// Trackear página actual
+window.__analytics.trackPageview()
+
+// Trackear página específica (path personalizado)
+window.__analytics.trackPageview('/productos/123', 'Producto Ejemplo')
+
+// Trackear evento personalizado
+window.__analytics.trackEvent('purchase', { plan: 'pro', value: 99 })
+
+// Track genérico con datos personalizados
+window.__analytics.track('pageview', undefined, {
+  path: '/checkout/paso-2',
+  title: 'Checkout - Paso 2',
+})
+```
+
+### Eventos personalizados (HTML):
 
 ```html
 <button data-analytics-event="signup">Registrarse</button>

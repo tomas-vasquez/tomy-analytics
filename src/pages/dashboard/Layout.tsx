@@ -87,7 +87,7 @@ function DashboardLayoutInner() {
   const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const { sites, selected, setSelected } = useSite()
+  const { sites, selected, setSelected, loading } = useSite()
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -97,8 +97,8 @@ function DashboardLayoutInner() {
   }, [navigate])
 
   useEffect(() => {
-    if (!sites.length) navigate('/onboarding', { replace: true })
-  }, [sites, navigate])
+    if (!loading && !sites.length) navigate('/onboarding', { replace: true })
+  }, [sites, loading, navigate])
 
   useEffect(() => {
     setSidebarOpen(false)
@@ -138,7 +138,11 @@ function DashboardLayoutInner() {
         </div>
 
         <div className="flex-1">
-          {selected ? <Outlet /> : (
+          {loading ? (
+            <div className="flex items-center justify-center py-20">
+              <div className="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
+            </div>
+          ) : selected ? <Outlet /> : (
             <div className="p-10 text-center text-slate-500">
               <p>No hay sitios registrados.</p>
               <Link to="/onboarding" className="text-blue-600 hover:underline text-sm mt-1 inline-block">Crear un sitio</Link>
